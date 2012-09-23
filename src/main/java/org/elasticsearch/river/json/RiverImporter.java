@@ -33,22 +33,20 @@ public class RiverImporter {
     public RiverProductImport executeImport(String lastIndexUpdate) {
         RiverProductImport result = new RiverProductImport();
 
-        InputStream is = null;
-
-        String timestamp = null;
-        @SuppressWarnings("unused")
-        Token token = null;
         XContentParser parser = null;
+        InputStream is = null;
+        String timestamp = null;
 
         try {
             is = getConnectionInputstream(lastIndexUpdate);
-
             parser = JsonXContent.jsonXContent.createParser(is);
 
             String action = null;
             Map<String, Object> product = null;
             String id = null;
 
+            @SuppressWarnings("unused")
+            Token token = null;
             while ((token = parser.nextToken()) != null) {
 
                 if ("timestamp".equals(parser.text())) {
@@ -87,6 +85,9 @@ public class RiverImporter {
             logger.error("Could not get content with lastUpdatedTimestamp [{}]", e, lastIndexUpdate);
         } finally {
             Closeables.closeQuietly(is);
+            if (parser != null) {
+                parser.close();
+            }
         }
 
         return result;

@@ -33,7 +33,7 @@ public class JsonRiverTest {
     private Client client;
 
     @Before
-    public void startNode() {
+    public void setup() throws Exception {
         JsonRiver.RIVER_REFRESH_INTERVAL = TimeValue.timeValueMillis(500);
         JsonRiver.RIVER_URL = "http://localhost:4567/data";
 
@@ -129,6 +129,9 @@ public class JsonRiverTest {
                 return result;
             }
         });
+
+        // sleep to ensure that the river has slurped in the data
+        Thread.sleep(2000);
     }
 
     @After
@@ -139,9 +142,6 @@ public class JsonRiverTest {
 
     @Test
     public void testThatDeletionWorks() throws Exception {
-        // Wait two seconds for first indexation from river
-        Thread.sleep(2000);
-
         GetRequestBuilder builder = new GetRequestBuilder(client);
         GetResponse response = builder.setIndex("products").setType("product").setId("TODELETE").execute().actionGet();
 
@@ -149,9 +149,7 @@ public class JsonRiverTest {
     }
 
     @Test
-    public void testThatRiverWorks() throws Exception {
-        Thread.sleep(2000);
-
+    public void testThatIndexingWorks() throws Exception {
         GetRequestBuilder builder = new GetRequestBuilder(client);
         GetResponse response = builder.setIndex("products").setType("product").setId("1234").execute().actionGet();
 
@@ -160,8 +158,6 @@ public class JsonRiverTest {
 
     @Test
     public void testThatLastUpdatedTimestampIsWritten() throws Exception {
-        Thread.sleep(2000);
-
         GetRequestBuilder builder = new GetRequestBuilder(client);
         GetResponse response = builder.setIndex("_river").setType("json").setId("lastUpdatedTimestamp").execute().actionGet();
 
