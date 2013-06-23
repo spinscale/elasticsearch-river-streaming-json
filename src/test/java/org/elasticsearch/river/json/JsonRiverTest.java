@@ -47,17 +47,11 @@ public class JsonRiverTest {
         client.prepareIndex("_river", "json", "_meta").setSource("{ \"type\": \"json\" }").execute().actionGet();
         client.admin().indices().prepareCreate("products").execute().actionGet();
 
-        client.admin().cluster().health(new ClusterHealthRequest("products").waitForYellowStatus()).actionGet();
-        client.admin().cluster().health(new ClusterHealthRequest("_river").waitForYellowStatus()).actionGet();
+        client.admin().cluster().prepareHealth("products").setWaitForYellowStatus().execute().actionGet();
+        client.admin().cluster().prepareHealth("_river").setWaitForYellowStatus().execute().actionGet();
 
-        IndexRequestBuilder indexRequestBuilder = new IndexRequestBuilder(client, "products");
-        indexRequestBuilder.setType("product").setId("TODELETE");
-        indexRequestBuilder.setSource("{ \"some\" : \"cool content\" }");
-        indexRequestBuilder.execute().actionGet();
-
-        FlushRequestBuilder builder = new FlushRequestBuilder(client.admin().indices());
-        builder.setIndices("products").execute().actionGet();
-
+        client.prepareIndex("products", "product", "TODELETE").setSource("{ \"some\" : \"cool content\" }").execute().actionGet();
+        client.admin().indices().prepareRefresh("products").execute().actionGet();
 
 /*
  * {
@@ -142,10 +136,10 @@ public class JsonRiverTest {
 
     @Test
     public void testThatDeletionWorks() throws Exception {
-        GetRequestBuilder builder = new GetRequestBuilder(client);
-        GetResponse response = builder.setIndex("products").setType("product").setId("TODELETE").execute().actionGet();
+        client.admin().indices().prepareFlush("products").execute().actionGet();
+        GetResponse response = client.prepareGet("products", "products", "TODELETE").execute().actionGet();
 
-        assertThat(response.exists(), is(false));
+        assertThat(response.isExists(), is(false));
     }
 
     @Test
@@ -153,7 +147,7 @@ public class JsonRiverTest {
         GetRequestBuilder builder = new GetRequestBuilder(client);
         GetResponse response = builder.setIndex("products").setType("product").setId("1234").execute().actionGet();
 
-        assertThat(response.exists(), is(true));
+        assertThat(response.isExists(), is(true));
     }
 
     @Test
@@ -161,7 +155,7 @@ public class JsonRiverTest {
         GetRequestBuilder builder = new GetRequestBuilder(client);
         GetResponse response = builder.setIndex("_river").setType("json").setId("lastUpdatedTimestamp").execute().actionGet();
 
-        assertThat(response.exists(), is(true));
+        assertThat(response.isExists(), is(true));
         assertThat(response.getSource().get("lastUpdatedTimestamp").toString(), is(not(nullValue())));
     }
 }

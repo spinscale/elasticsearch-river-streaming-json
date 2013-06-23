@@ -107,7 +107,7 @@ public class JsonRiver extends AbstractRiverComponent implements River {
 
         private String getLastUpdatedTimestamp() {
             GetResponse lastUpdatedTimestampResponse = client.prepareGet().setIndex(riverIndexName).setType(riverName.name()).setId("lastUpdatedTimestamp").execute().actionGet();
-            if (lastUpdatedTimestampResponse.exists() && lastUpdatedTimestampResponse.getSource().containsKey("lastUpdatedTimestamp")) {
+            if (lastUpdatedTimestampResponse.isExists() && lastUpdatedTimestampResponse.getSource().containsKey("lastUpdatedTimestamp")) {
                 return lastUpdatedTimestampResponse.getSource().get("lastUpdatedTimestamp").toString();
             }
 
@@ -148,9 +148,12 @@ public class JsonRiver extends AbstractRiverComponent implements River {
 
         private void addProductToBulkRequest(RiverProduct riverProduct) {
             if (riverProduct.action == RiverProduct.Action.DELETE) {
-                bulk.add(deleteRequest(RIVER_INDEX).type(RIVER_TYPE).id(riverProduct.id));
+                //bulk.add(deleteRequest(RIVER_INDEX).type(RIVER_TYPE).id(riverProduct.id));
+                logger.error("DELETING {}/{}/{}", RIVER_INDEX, RIVER_TYPE, riverProduct.id);
+                client.prepareDelete(RIVER_INDEX, RIVER_TYPE, riverProduct.id).execute().actionGet();
                 deletedDocuments++;
             } else {
+                logger.error("INDEXING {}/{}/{}", RIVER_INDEX, RIVER_TYPE, riverProduct.id);
                 bulk.add(indexRequest(RIVER_INDEX).type(RIVER_TYPE).id(riverProduct.id).source(riverProduct.product));
                 insertedDocuments++;
             }
@@ -160,6 +163,7 @@ public class JsonRiver extends AbstractRiverComponent implements River {
             long totalDocuments = deletedDocuments + insertedDocuments;
             long totalTimeInSeconds = sw.stop().totalTime().seconds();
             long totalDocumentsPerSecond = (totalTimeInSeconds == 0) ? totalDocuments : totalDocuments / totalTimeInSeconds;
+            logger.info("INDEXED {} documents, {} insertions/updates, {} deletions, {} documents per second", totalDocuments, insertedDocuments, deletedDocuments, totalDocumentsPerSecond);
             logger.info("Indexed {} documents, {} insertions/updates, {} deletions, {} documents per second", totalDocuments, insertedDocuments, deletedDocuments, totalDocumentsPerSecond);
         }
     }
